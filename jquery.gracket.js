@@ -30,7 +30,6 @@
     // global
     var container = this,
         team_count,
-        round_count,
         game_count,
         data;
 
@@ -50,76 +49,83 @@
       _canvas.style.top = 0;
       _canvas.style.right = "auto";
       return _canvas;
-    }
+    };
 
-    // Public methods
-    var methods = {
-      init : function(options) {
+    var createRounds = function(round_count, settings) {
+      for (var r=0; r < round_count; r++) {
 
-        // merge options with settings
-        this.gracket.settings = $.extend({}, this.gracket.defaults, options);
+        var round_html = helpers.build.round(settings);
+        container.append(round_html);
 
-        // always prepend unique id to canvas id, as we dont want dupes
-        var canvasId = this.gracket.settings.canvasId = this.gracket.settings.canvasId + "_" + ((new Date()).getTime());
+        // create games in round
+        game_count = data[r].length;
+        for (var g=0; g < game_count; g++) {
 
-        // build empty canvas
-        var _canvas = buildEmptyCanvas(canvasId, this.gracket.settings.canvasClass);
+          var
+          game_html = helpers.build.game(settings),
+          outer_height = container.find("." + settings.gameClass).outerHeight(true),
+          spacer = helpers.build.spacer(settings, outer_height, r, (r !== 0 && g === 0) ? true : false)
+              ;
 
-        // Append canvas & add class
-        container
-          .addClass(this.gracket.settings.gracketClass)
-          .prepend(_canvas);
+          // append spacer
+          if (g % 1 == 0 && r !== 0) round_html.append(spacer);
 
+          // append game
+          round_html.append(game_html);
 
-        //  create rounds
-        round_count = data.length;
-        for (var r=0; r < round_count; r++) {
+          // create teams in game
+          team_count = data[r][g].length;
+          for (var t=0; t < team_count; t++) {
 
-          var round_html = helpers.build.round(this.gracket.settings);
-          container.append(round_html);
+            var team_html = helpers.build.team(data[r][g][t], settings);
+            game_html.append(team_html);
 
-          // create games in round
-          game_count = data[r].length;
-          for (var g=0; g < game_count; g++) {
+            // adjust winner
+            if (team_count === 1) {
 
-            var
-              game_html = helpers.build.game(this.gracket.settings),
-              outer_height = container.find("." + this.gracket.settings.gameClass).outerHeight(true),
-              spacer = helpers.build.spacer(this.gracket.settings, outer_height, r, (r !== 0 && g === 0) ? true : false)
-            ;
+              // remove spacer
+              game_html.prev().remove()
 
-            // append spacer
-            if (g % 1 == 0 && r !== 0) round_html.append(spacer);
+              // align winner
+              helpers.align.winner(game_html, settings, game_html.parent().prev().children().eq(0).height());
 
-            // append game
-            round_html.append(game_html);
+              // init the listeners after gracket is built
+              helpers.listeners(settings, data, game_html.parent().prev().children().eq(1));
 
-            // create teams in game
-            team_count = data[r][g].length;
-            for (var t=0; t < team_count; t++) {
-
-              var team_html = helpers.build.team(data[r][g][t], this.gracket.settings);
-              game_html.append(team_html);
-
-              // adjust winner
-              if (team_count === 1) {
-
-                // remove spacer
-                game_html.prev().remove()
-
-                // align winner
-                helpers.align.winner(game_html, this.gracket.settings, game_html.parent().prev().children().eq(0).height());
-
-                // init the listeners after gracket is built
-                helpers.listeners(this.gracket.settings, data, game_html.parent().prev().children().eq(1));
-
-              }
-
-            };
+            }
 
           };
 
         };
+
+      };
+
+    }
+
+
+
+    // Public methods
+    var methods = {
+      init : function(options) {
+        // merge options with settings
+        var settings = this.gracket.settings = $.extend({}, this.gracket.defaults, options);
+
+        // always prepend unique id to canvas id, as we dont want dupes
+        settings.canvasId = settings.canvasId + "_" + ((new Date()).getTime());
+
+        // build empty canvas
+        var _canvas = buildEmptyCanvas(settings.canvasId, settings.canvasClass);
+
+        // Append canvas & add class
+        container
+          .addClass(settings.gracketClass)
+          .prepend(_canvas);
+
+
+        //  create rounds
+        var roundCount = data.length;
+        createRounds(roundCount, settings);
+
       }
 
     };
